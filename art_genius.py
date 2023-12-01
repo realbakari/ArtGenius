@@ -1,9 +1,7 @@
 #@title ArtGenius
 prompt = 'Full-body shot of the coolest car in the world' #@param {type:"string"}
-openai_key = '' #@param {type:"string"}
+openai_key = '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' #@param {type:"string"}
 steps = 5 #@param {type:"slider", min:1, max:10, step:1}
-
-!pip install --upgrade openai > /dev/null
 
 from openai import OpenAI
 from PIL import Image
@@ -17,6 +15,9 @@ def decide_style(prompt):
     """
     Decide whether the image style should be 'natural' or 'artistic'.
     """
+
+    # Use GPT-4 to decide the style based on the provided prompt
+
     response = client.chat.completions.create(
         model="gpt-4",
         messages=[
@@ -27,6 +28,8 @@ def decide_style(prompt):
         max_tokens=1,
         temperature=0,
     )
+
+    # Determine the style based on the response
 
     style = 'vivid' if 'art' in response.choices[0].message.content else 'natural'
     print('Style Chosen:', style)
@@ -44,6 +47,7 @@ def generate_image(prompt, style):
         style=style,
         n=1,
     )
+    # Extract the generated image URL and revised prompt
 
     image_url = response.data[0].url
     revised_prompt = response.data[0].revised_prompt
@@ -52,6 +56,9 @@ def generate_image(prompt, style):
 def get_artistic_suggestion(image_url, prompt):
     """
     Get artistic suggestions for improving the generated image.
+
+    Request artistic suggestions for image improvement
+
     """
     suggestion_request = [
         {"type": "text", "text": f"In two sentences or less, how can this image be improved to better fit this prompt: `{prompt.strip()}`?"},
@@ -64,8 +71,13 @@ def get_artistic_suggestion(image_url, prompt):
         max_tokens=250,
     )
 
+    # Extract the artistic suggestion
+
     suggestion = response.choices[0].message.content
     print('Suggestion:', suggestion)
+
+    # Create a new prompt based on the suggestion
+
 
     improved_prompt_request = [
         {"type": "text", "text": f"Here is the current prompt that was used to generate this image: `{prompt}`.\n\nHere is a suggestion for improvement: `{suggestion}`.\n\nWrite a new prompt that incorporates the suggestion to generate a better image. Make it clear, and three sentences or less. Don't mention that there have been other prompts, just describe what you want the new image to look like."},
@@ -77,6 +89,8 @@ def get_artistic_suggestion(image_url, prompt):
         messages=[{"role": "user", "content": improved_prompt_request}],
         max_tokens=250,
     )
+
+    # Extract the improved prompt
 
     improved_prompt = response.choices[0].message.content
     print('Improved Prompt:', improved_prompt)
@@ -98,13 +112,15 @@ def gpt_artist(prompt, steps):
             img = Image.open(BytesIO(response.content))
             display(img)
 
-            # Get artistic suggestion
+            # Get artistic suggestion for improvement
             prompt = get_artistic_suggestion(image_url, prompt)
         except Exception as e:
+
+            # Handle errors and retry
             print(f"An error occurred: {str(e)}. Retrying...")
 
     return prompt
 
-# Test the 'gpt-artist'
+# Test the 'gpt-art_genius'
 final_prompt = gpt_artist(prompt, steps)
 print("Final prompt:", final_prompt)
